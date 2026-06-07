@@ -61,7 +61,7 @@ scale.
 ## Install
 
 ```
-curl -fsSL https://raw.githubusercontent.com/maximilianigl/crew/main/site/public/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/maximilianigl/crew/main/site/public/install.sh | bash
 ```
 
 A single binary. Drops itself at `~/.local/bin/crew`, plus whatever skills you

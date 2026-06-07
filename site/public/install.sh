@@ -3,7 +3,7 @@
 # crew installer.
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/maximilianigl/crew/main/site/public/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/maximilianigl/crew/main/site/public/install.sh | bash
 #
 # What it does:
 #   1. Detects your OS and CPU architecture (macOS/Linux, arm64/x86_64).

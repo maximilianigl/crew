@@ -9,7 +9,7 @@ import styles from "./Install.module.css";
 
 const INSTALL_URL =
   "https://raw.githubusercontent.com/maximilianigl/crew/main/site/public/install.sh";
-const INSTALL_COMMAND = `curl -fsSL ${INSTALL_URL} | sh`;
+const INSTALL_COMMAND = `curl -fsSL ${INSTALL_URL} | bash`;
 const CREW_VERSION = CREW_VERSION_TAG.replace(/^v/, "");
 
 export function Install() {
@@ -33,7 +33,7 @@ export function Install() {
           <CodeBlock>
             {"$ curl -fsSL "}
             <Acc>{INSTALL_URL}</Acc>
-            {" | sh\n$ crew version\ncrew "}
+            {" | bash\n$ crew version\ncrew "}
             <Acc>{CREW_VERSION}</Acc>
             {" (linux-x64)"}
           </CodeBlock>
