@@ -26,11 +26,11 @@ export function Nav() {
         <div className={styles.spacer} />
         <a
           className={styles.osPill}
-          href="https://github.com/with-logic/crew"
+          href="https://github.com/maximilianigl/crew"
           aria-label="GitHub repository"
         >
           <GitHubMark />
-          github.com/with-logic/crew
+          github.com/maximilianigl/crew
         </a>
         <a className={styles.cta} href="/#install">
           $ crew install <span className={styles.ctaArrow}>↗</span>

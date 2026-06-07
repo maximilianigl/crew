@@ -7,7 +7,9 @@ import { Section } from "../primitives/Section";
 import { BuildItYourself } from "./BuildItYourself";
 import styles from "./Install.module.css";
 
-const INSTALL_COMMAND = "curl -fsSL https://crew.logic.inc/install.sh | sh";
+const INSTALL_URL =
+  "https://raw.githubusercontent.com/maximilianigl/crew/main/site/public/install.sh";
+const INSTALL_COMMAND = `curl -fsSL ${INSTALL_URL} | sh`;
 const CREW_VERSION = CREW_VERSION_TAG.replace(/^v/, "");
 
 export function Install() {
@@ -30,7 +32,7 @@ export function Install() {
         <div className={styles.card}>
           <CodeBlock>
             {"$ curl -fsSL "}
-            <Acc>https://crew.logic.inc/install.sh</Acc>
+            <Acc>{INSTALL_URL}</Acc>
             {" | sh\n$ crew version\ncrew "}
             <Acc>{CREW_VERSION}</Acc>
             {" (linux-x64)"}

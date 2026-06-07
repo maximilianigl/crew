@@ -28,13 +28,13 @@ const COLUMNS: readonly {
   {
     title: "Project",
     links: [
-      { href: "https://github.com/with-logic/crew", label: "GitHub" },
+      { href: "https://github.com/maximilianigl/crew", label: "GitHub" },
       { href: "https://github.com/with-logic/crew-skills", label: "Default tap (core)" },
       {
-        href: "https://github.com/with-logic/crew/blob/main/CHANGELOG.md",
+        href: "https://github.com/maximilianigl/crew/blob/main/CHANGELOG.md",
         label: "Changelog",
       },
-      { href: "https://github.com/with-logic/crew/blob/main/LICENSE", label: "License · MIT" },
+      { href: "https://github.com/maximilianigl/crew/blob/main/LICENSE", label: "License · MIT" },
     ],
   },
 ];

@@ -32,7 +32,7 @@ export function Agents() {
 
         <p className={styles.footnote}>
           Don't see yours? Its adapter probably takes a minute to write —{" "}
-          <a href="https://github.com/with-logic/crew/blob/main/PRD.md#71-adapter-operations">
+          <a href="https://github.com/maximilianigl/crew/blob/main/PRD.md#71-adapter-operations">
             §7.1
           </a>{" "}
           in the PRD walks you through it.

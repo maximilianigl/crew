@@ -208,6 +208,8 @@ describe("post-command update notice", () => {
     // No record on disk → stale → should trigger one fetch.
     runCli(["list"], { home, streams: cap.streams, stderrIsTty: true });
     expect(fetches.length).toBe(1);
-    expect(fetches[0]).toBe("https://crew.logic.inc/latest-version.json");
+    expect(fetches[0]).toBe(
+      "https://raw.githubusercontent.com/maximilianigl/crew/main/site/public/latest-version.json",
+    );
   });
 });

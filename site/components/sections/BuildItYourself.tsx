@@ -8,7 +8,7 @@ interface Props {
   readonly prompt: string;
 }
 
-const PRD_URL = "https://github.com/with-logic/crew/blob/main/PRD.md";
+const PRD_URL = "https://github.com/maximilianigl/crew/blob/main/PRD.md";
 
 /**
  * "From Scratch" (Software-as-a-Prompt) callout.

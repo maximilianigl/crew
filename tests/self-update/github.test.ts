@@ -24,8 +24,10 @@ afterEach(() => {
 });
 
 describe("URL helpers", () => {
-  test("releasesLatestUrl defaults to the project site's fast-path file", () => {
-    expect(releasesLatestUrl()).toBe("https://crew.logic.inc/latest-version.json");
+  test("releasesLatestUrl defaults to the repository's fast-path file", () => {
+    expect(releasesLatestUrl()).toBe(
+      "https://raw.githubusercontent.com/maximilianigl/crew/main/site/public/latest-version.json",
+    );
   });
 
   test("releasesLatestUrl honors the override env var", () => {
@@ -35,7 +37,7 @@ describe("URL helpers", () => {
 
   test("releasesByTagUrl goes straight to GitHub's tag endpoint", () => {
     expect(releasesByTagUrl("v0.4.0")).toBe(
-      "https://api.github.com/repos/with-logic/crew/releases/tags/v0.4.0",
+      "https://api.github.com/repos/maximilianigl/crew/releases/tags/v0.4.0",
     );
   });
 

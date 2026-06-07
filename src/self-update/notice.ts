@@ -10,9 +10,8 @@
  *   3. If the resulting `latest_tag` differs from `CREW_VERSION`, emit
  *      a single stderr line.
  *
- * The fetch targets `https://crew.logic.inc/latest-version.json` by
- * default — a static file on Vercel's edge cache, much faster than
- * hitting the GitHub API. The release script updates it on publish.
+ * The fetch targets a static `latest-version.json` file in the GitHub
+ * repository by default. The release script updates it on publish.
  */
 
 import type { OutputStreams } from "../cli/output.ts";

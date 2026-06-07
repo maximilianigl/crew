@@ -2,7 +2,7 @@
 
 **A package manager for Agent Skills.**
 
-Version: 0.9.0
+Version: 0.9.1
 Status: Specification, ready for implementation
 Platform: macOS and Linux (arm64 and x86_64)
 
@@ -1041,11 +1041,11 @@ interval. Successful `disable` sets `autoupdate.enabled` to `false`.
 
 **Release channel.** Two endpoints:
 
-- **Latest release** — `https://crew.logic.inc/latest-version.json`, a
-  static file served from the project's website (edge-cached, fast).
-  Updated by the release script on every publish. This is the endpoint
-  the update-available notice (§10.4) hits every 24h.
-- **Specific tag** — GitHub's `https://api.github.com/repos/with-logic/crew/releases/tags/<tag>`.
+- **Latest release** — `https://raw.githubusercontent.com/maximilianigl/crew/main/site/public/latest-version.json`,
+  a static file stored in the project repository. Updated by the release
+  script on every publish. This is the endpoint the update-available
+  notice (§10.4) hits every 24h.
+- **Specific tag** — GitHub's `https://api.github.com/repos/maximilianigl/crew/releases/tags/<tag>`.
   Only used when the user passes `--version <tag>`.
 
 Both endpoints emit the same JSON shape:
@@ -1054,12 +1054,12 @@ Both endpoints emit the same JSON shape:
 {
   "tag_name": "v0.4.0",
   "assets": [
-    { "name": "crew-macos-arm64", "browser_download_url": "https://github.com/with-logic/crew/releases/download/v0.4.0/crew-macos-arm64" },
-    { "name": "crew-macos-x64",   "browser_download_url": "https://github.com/with-logic/crew/releases/download/v0.4.0/crew-macos-x64" },
-    { "name": "crew-linux-arm64", "browser_download_url": "https://github.com/with-logic/crew/releases/download/v0.4.0/crew-linux-arm64" },
-    { "name": "crew-linux-x64",   "browser_download_url": "https://github.com/with-logic/crew/releases/download/v0.4.0/crew-linux-x64" },
-    { "name": "SHA256SUMS",       "browser_download_url": "https://github.com/with-logic/crew/releases/download/v0.4.0/SHA256SUMS" },
-    { "name": "SHA256SUMS.sig",   "browser_download_url": "https://github.com/with-logic/crew/releases/download/v0.4.0/SHA256SUMS.sig" }
+    { "name": "crew-macos-arm64", "browser_download_url": "https://github.com/maximilianigl/crew/releases/download/v0.4.0/crew-macos-arm64" },
+    { "name": "crew-macos-x64",   "browser_download_url": "https://github.com/maximilianigl/crew/releases/download/v0.4.0/crew-macos-x64" },
+    { "name": "crew-linux-arm64", "browser_download_url": "https://github.com/maximilianigl/crew/releases/download/v0.4.0/crew-linux-arm64" },
+    { "name": "crew-linux-x64",   "browser_download_url": "https://github.com/maximilianigl/crew/releases/download/v0.4.0/crew-linux-x64" },
+    { "name": "SHA256SUMS",       "browser_download_url": "https://github.com/maximilianigl/crew/releases/download/v0.4.0/SHA256SUMS" },
+    { "name": "SHA256SUMS.sig",   "browser_download_url": "https://github.com/maximilianigl/crew/releases/download/v0.4.0/SHA256SUMS.sig" }
   ]
 }
 ```
@@ -1077,13 +1077,15 @@ Every release starting with `v0.7.1` MUST publish both:
   `SHA256SUMS` bytes, verifiable with Homecrew's pinned release-signing
   public key.
 
-The hosted installer (`https://crew.logic.inc/install.sh`) and
-`crew self-update` MUST download these files from the same release as the
-selected binary, verify the checksum-file signature, and then verify the
-chosen asset against the authenticated checksum file before installing it. A
-signature mismatch, checksum mismatch, missing checksum, or missing signature
-is a failed install/update. `v0.7.0` is the only legacy release that may fall
-back to checksum-only verification because it was published before signatures.
+The repository installer
+(`https://raw.githubusercontent.com/maximilianigl/crew/main/site/public/install.sh`)
+and `crew self-update` MUST download these files from the same release as
+the selected binary, verify the checksum-file signature, and then verify
+the chosen asset against the authenticated checksum file before installing
+it. A signature mismatch, checksum mismatch, missing checksum, or missing
+signature is a failed install/update. `v0.7.0` is the only legacy release
+that may fall back to checksum-only verification because it was published
+before signatures.
 
 Implementations MAY accept `CREW_SELF_UPDATE_RELEASES_URL` to override
 the latest-release URL (used by tests and private forks).

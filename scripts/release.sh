@@ -264,9 +264,9 @@ if [ -f PRD.md ]; then
 fi
 
 # Regenerate the site's latest-version.json. This file is served at
-# https://crew.logic.inc/latest-version.json and is the fast-path
-# endpoint that the 24h update-available notice pings (§10.4). Points
-# the asset URLs at the new release's GitHub downloads.
+# site/public/latest-version.json and is the fast-path endpoint that the
+# 24h update-available notice pings (§10.4). Points the asset URLs at
+# the new release's GitHub downloads.
 if [ -d site/public ]; then
   cat > site/public/latest-version.json <<JSON
 {
@@ -274,27 +274,27 @@ if [ -d site/public ]; then
   "assets": [
     {
       "name": "crew-macos-arm64",
-      "browser_download_url": "https://github.com/with-logic/crew/releases/download/${next_tag}/crew-macos-arm64"
+      "browser_download_url": "https://github.com/maximilianigl/crew/releases/download/${next_tag}/crew-macos-arm64"
     },
     {
       "name": "crew-macos-x64",
-      "browser_download_url": "https://github.com/with-logic/crew/releases/download/${next_tag}/crew-macos-x64"
+      "browser_download_url": "https://github.com/maximilianigl/crew/releases/download/${next_tag}/crew-macos-x64"
     },
     {
       "name": "crew-linux-arm64",
-      "browser_download_url": "https://github.com/with-logic/crew/releases/download/${next_tag}/crew-linux-arm64"
+      "browser_download_url": "https://github.com/maximilianigl/crew/releases/download/${next_tag}/crew-linux-arm64"
     },
     {
       "name": "crew-linux-x64",
-      "browser_download_url": "https://github.com/with-logic/crew/releases/download/${next_tag}/crew-linux-x64"
+      "browser_download_url": "https://github.com/maximilianigl/crew/releases/download/${next_tag}/crew-linux-x64"
     },
     {
       "name": "SHA256SUMS",
-      "browser_download_url": "https://github.com/with-logic/crew/releases/download/${next_tag}/SHA256SUMS"
+      "browser_download_url": "https://github.com/maximilianigl/crew/releases/download/${next_tag}/SHA256SUMS"
     },
     {
       "name": "SHA256SUMS.sig",
-      "browser_download_url": "https://github.com/with-logic/crew/releases/download/${next_tag}/SHA256SUMS.sig"
+      "browser_download_url": "https://github.com/maximilianigl/crew/releases/download/${next_tag}/SHA256SUMS.sig"
     }
   ]
 }

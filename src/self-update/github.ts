@@ -9,16 +9,16 @@
  *
  * Two endpoints, one for each use case:
  *
- *   - "Latest" — served by `https://crew.logic.inc/latest-version.json`,
- *     a static file on Vercel's edge cache. Fast (tens of ms), no rate
- *     limits, updated by `scripts/release.sh` on every release.
+ *   - "Latest" — served by
+ *     `https://raw.githubusercontent.com/maximilianigl/crew/main/site/public/latest-version.json`,
+ *     a static file updated by `scripts/release.sh` on every release.
  *   - "Specific tag" — served by the GitHub API's
  *     `/repos/.../releases/tags/<tag>` endpoint. Slower and rate-limited,
  *     but the only way to pin a historical release.
  *
  * Both endpoints emit the same JSON shape: `{ tag_name, assets: [{ name,
- * browser_download_url }] }`. That's GitHub's native format; the site's
- * static file mimics it so we don't branch on response shape.
+ * browser_download_url }] }`. That's GitHub's native format; the static
+ * metadata file mimics it so we don't branch on response shape.
  *
  * We shell out to `curl` because crew's command path is synchronous
  * throughout — the installer script already requires `curl`, so this
@@ -36,12 +36,13 @@ export interface ReleaseInfo {
 }
 
 /**
- * URL for the "latest release" feed. Fast-path, edge-cached.
+ * URL for the "latest release" feed. Fast-path static metadata.
  * Overridable for tests + private forks via `CREW_SELF_UPDATE_RELEASES_URL`.
  */
 export function releasesLatestUrl(): string {
   return (
-    process.env["CREW_SELF_UPDATE_RELEASES_URL"] ?? "https://crew.logic.inc/latest-version.json"
+    process.env["CREW_SELF_UPDATE_RELEASES_URL"] ??
+    "https://raw.githubusercontent.com/maximilianigl/crew/main/site/public/latest-version.json"
   );
 }
 
@@ -53,7 +54,7 @@ export function releasesLatestUrl(): string {
 export function releasesByTagUrl(tag: string): string {
   const base =
     process.env["CREW_SELF_UPDATE_TAG_URL_BASE"] ??
-    "https://api.github.com/repos/with-logic/crew/releases/tags";
+    "https://api.github.com/repos/maximilianigl/crew/releases/tags";
   return `${base}/${tag}`;
 }
 
