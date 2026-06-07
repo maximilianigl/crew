@@ -127,7 +127,7 @@ export const GROUPS: readonly CommandGroup[] = [
             crew autoupdate enable <span className={styles.flag}>[--interval]</span>
           </>
         ),
-        description: "Install a launchd user agent that runs `crew update --quiet` every 4 hours.",
+        description: "Install a launchd agent on macOS or a systemd user timer on Linux that runs `crew update --quiet` every 4 hours.",
       },
       {
         name: "autoupdate-disable",

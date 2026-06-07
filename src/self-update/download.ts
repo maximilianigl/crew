@@ -1,7 +1,7 @@
 /**
  * Release-asset download + binary swap (§10.3 steps 3–5).
  *
- * Downloads the right asset for the current CPU architecture to a
+ * Downloads the right asset for the current OS and CPU architecture to a
  * temp file, marks it executable, clears the macOS quarantine xattr,
  * and atomically renames it over `process.execPath`. The running
  * process keeps executing on the old inode; the new binary takes
@@ -15,10 +15,31 @@ import { chmodSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { CrewError } from "../core/errors.ts";
+import { type HostPlatform, hostArch, hostPlatform } from "../core/platform.ts";
 import { atomicReplace } from "../util/fs.ts";
 
-/** Asset name for the current CPU arch, or throws if unsupported. */
-export function assetNameForArch(arch: string = process.arch): string {
+/** Asset name for a supported OS/CPU pair, or throws if unsupported. */
+export function assetNameForPlatform(
+  platform: HostPlatform = hostPlatform(),
+  arch: string = hostArch(),
+): string {
+  if (platform === "darwin") {
+    if (arch === "arm64") return "crew-macos-arm64";
+    if (arch === "x64") return "crew-macos-x64";
+  }
+  if (platform === "linux") {
+    if (arch === "arm64") return "crew-linux-arm64";
+    if (arch === "x64") return "crew-linux-x64";
+  }
+  throw new CrewError(
+    "self_update_unavailable",
+    `no release asset for this platform (${platform}) and CPU (${arch}). Homecrew ships binaries for macOS and Linux on arm64 and x64.`,
+    { platform, arch },
+  );
+}
+
+/** Legacy macOS asset-name helper kept for existing tests and callers. */
+export function assetNameForArch(arch: string = hostArch()): string {
   if (arch === "arm64") return "crew-macos-arm64";
   if (arch === "x64") return "crew-macos-x64";
   throw new CrewError(

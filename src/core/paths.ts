@@ -32,6 +32,20 @@ export function launchAgentsDir(): string {
   return join(homedir(), "Library", "LaunchAgents");
 }
 
+/**
+ * Resolve the systemd user unit directory (§10.2 Linux). Normally
+ * `$XDG_CONFIG_HOME/systemd/user` or `~/.config/systemd/user`; tests can
+ * redirect the final directory via `CREW_SYSTEMD_USER_DIR`.
+ */
+export function systemdUserDir(): string {
+  const override = process.env["CREW_SYSTEMD_USER_DIR"];
+  if (override && override.length > 0) {
+    return override;
+  }
+  const configHome = process.env["XDG_CONFIG_HOME"] || join(homedir(), ".config");
+  return join(configHome, "systemd", "user");
+}
+
 /** Every well-known path crew produces. */
 export interface CrewPaths {
   readonly home: string;
@@ -46,6 +60,9 @@ export interface CrewPaths {
   readonly autoupdateLog: string;
   readonly launchAgentsDir: string;
   readonly autoupdatePlist: string;
+  readonly systemdUserDir: string;
+  readonly autoupdateService: string;
+  readonly autoupdateTimer: string;
   readonly versionCheckFile: string;
 }
 
@@ -64,6 +81,9 @@ export function paths(home: string = crewHome()): CrewPaths {
     autoupdateLog: join(home, "logs", "autoupdate.log"),
     launchAgentsDir: launchAgentsDir(),
     autoupdatePlist: join(launchAgentsDir(), "sh.crew.autoupdate.plist"),
+    systemdUserDir: systemdUserDir(),
+    autoupdateService: join(systemdUserDir(), "sh.crew.autoupdate.service"),
+    autoupdateTimer: join(systemdUserDir(), "sh.crew.autoupdate.timer"),
     versionCheckFile: join(home, "version-check.json"),
   };
 }

@@ -3,6 +3,8 @@
   <h1>Homecrew</h1>
 </div>
 
+This fork adds linux support.
+
 **A package manager for [agent skills](https://agentskills.io/specification).**
 
 Install a skill once and `crew` copies it into every supported coding agent.
@@ -70,8 +72,9 @@ in place. Set `CREW_INSTALL_PREFIX` to pick a different location.
 
 Uninstall with `rm -rf ~/.crew && rm ~/.local/bin/crew`.
 
-**Requires:** macOS 13+ (Apple Silicon or Intel), `git` on `PATH`. The
-installer also uses macOS-standard `curl`, `shasum`, and `openssl`.
+**Requires:** macOS 13+ or Linux (arm64 or x86_64), `git` on `PATH`. The
+installer also uses `curl`, `openssl`, and either `shasum` on macOS or
+`sha256sum` on Linux.
 
 ## How it works
 
@@ -188,7 +191,7 @@ When a command asks for an installed skill name, you can use the bare name
 | `crew agents` | List detected agents and whether they're enabled, disabled, or forced. |
 | `crew agents enable <name>` | Force-enable an agent even if auto-detection misses it. |
 | `crew agents disable <name>` | Skip this agent on all install and update operations. |
-| `crew autoupdate enable [--interval]` | Install a launchd user agent that runs `crew update --quiet` on an interval (default 4h). |
+| `crew autoupdate enable [--interval]` | Install a launchd agent on macOS or a systemd user timer on Linux that runs `crew update --quiet` on an interval (default 4h). |
 | `crew autoupdate status` | Whether active, last run, next run, configured interval. |
 
 **Housekeeping**
@@ -340,7 +343,7 @@ ones. Delete code aggressively. Write the boring version first.
 
 ## Agents
 
-Works with every Mac agent that speaks the spec. Any agent coder that reads
+Works with every supported local agent that speaks the spec. Any agent coder that reads
 the [Agent Skills spec](https://agentskills.io/specification) is a valid
 target. Homecrew auto-detects the ones you already have and quietly skips the rest.
 
@@ -424,10 +427,9 @@ exact SHA are skipped unless `--force`. Skills pinned to a tag are
 re-resolved: if the tag moved and `--force` is given, the new commit is
 installed. Everything else updates to whatever the ref resolves to now.
 
-**What about Linux? Windows?** Future work. The v1 spec is macOS-only because
-launchd is the autoupdate mechanism and each agent adapter encodes
-platform-specific paths. Nothing in the core design is Mac-specific; it's a
-scope decision, not a technical one.
+**What about Windows?** Homecrew supports macOS and Linux. Windows is future
+work because autoupdate and several agent adapters need platform-specific
+install paths and scheduler behavior.
 
 **Can a skill depend on another skill in a different tap?** Yes. Dependency
 references are full skill references — any form the CLI accepts.
@@ -447,7 +449,7 @@ want to use it, stop here.
 ### Requirements
 
 - [Bun](https://bun.sh) — the only runtime. Homecrew ships as a single bundled
-  Mach-O executable produced by `bun build --compile`.
+  executable produced by `bun build --compile`.
 - `git` on `PATH`.
 
 ### Setup

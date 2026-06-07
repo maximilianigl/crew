@@ -7,12 +7,8 @@
  * when relevant.
  */
 
-import {
-  disableAutoupdate,
-  enableAutoupdate,
-  isAutoupdateLoaded,
-  readAutoupdateLogTail,
-} from "../autoupdate/launchd.ts";
+import { disableAutoupdate, enableAutoupdate, isAutoupdateLoaded } from "../autoupdate/backend.ts";
+import { readAutoupdateLogTail } from "../autoupdate/launchd.ts";
 import { DEFAULT_AUTOUPDATE_INTERVAL_SECONDS } from "../config/defaults.ts";
 import { readConfig, writeConfig } from "../config/load.ts";
 import { CrewError } from "../core/errors.ts";

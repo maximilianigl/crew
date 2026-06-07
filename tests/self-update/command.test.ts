@@ -30,9 +30,8 @@ import {
 import { captureStreams, makeCrewHome } from "../helpers/env.ts";
 import { currentAssetName, downloaderForBinary, releaseAssets } from "./helpers.ts";
 
-// Force darwin for the happy-path tests — `runSelfUpdate`'s platform
-// guard rejects non-macOS hosts. Without this override every test in
-// this file would fail on a Linux CI runner.
+// Force darwin for these happy-path tests so the expected release asset
+// names stay stable on Linux CI.
 const originalPlatform = process.platform;
 // Also clear the notice-suppression env vars so that on a CI runner
 // (where `CI` is set) the post-command update notice still fires —

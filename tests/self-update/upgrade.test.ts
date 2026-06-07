@@ -35,11 +35,9 @@ import {
   releaseAssets,
 } from "./helpers.ts";
 
-// Force `process.platform === "darwin"` for the duration of this file.
-// `runSelfUpdate`'s platform guard rejects non-macOS hosts (§10.3), so
-// every happy-path test here would fail on a Linux CI runner without
-// this override. The dedicated "platform guard" test below still
-// flips it back to "linux" for that one case.
+// Force `process.platform === "darwin"` for most of this file so the
+// expected release asset names stay stable on Linux CI. Individual tests
+// flip to Linux or unsupported platforms when that behavior is under test.
 const originalPlatform = process.platform;
 beforeAll(() => {
   Object.defineProperty(process, "platform", { value: "darwin", configurable: true });
@@ -77,6 +75,29 @@ describe("runSelfUpdate", () => {
     const record = readVersionCheck(home);
     expect(record?.latest_tag).toBe("v99.99.99");
     expect(existsSync(paths(home).versionCheckFile)).toBe(true);
+  });
+
+  test("downloads the Linux asset when running on Linux", () => {
+    Object.defineProperty(process, "platform", { value: "linux", configurable: true });
+    const home = makeCrewHome();
+    const dest = join(home, "crew-bin");
+    writeFileSync(dest, "OLD");
+
+    setReleaseFetcher(() => ({
+      tag: "v99.99.99",
+      assets: releaseAssets(),
+    }));
+    setAssetDownloader(downloaderForBinary("LINUX"));
+    setReleaseSignatureVerifier(() => true);
+    setXattrClearer(() => {});
+
+    try {
+      const result = runSelfUpdate({ home, force: false, execPath: dest });
+      expect(result.replaced).toBe(true);
+      expect(readFileSync(dest, "utf8")).toBe("LINUX");
+    } finally {
+      Object.defineProperty(process, "platform", { value: "darwin", configurable: true });
+    }
   });
 
   test("no-op when already on latest, but still refreshes version-check", () => {
@@ -246,11 +267,8 @@ describe("runSelfUpdateCheck", () => {
 });
 
 describe("platform guard", () => {
-  test("non-darwin raises self_update_unavailable before touching the network", () => {
-    // Inside this file, `beforeAll` has stamped platform = "darwin".
-    // Flip to linux for this test alone and restore to darwin after,
-    // keeping the file-level invariant intact for any later tests.
-    Object.defineProperty(process, "platform", { value: "linux", configurable: true });
+  test("unsupported platforms raise self_update_unavailable before touching the network", () => {
+    Object.defineProperty(process, "platform", { value: "win32", configurable: true });
     let fetcherCalled = false;
     setReleaseFetcher(() => {
       fetcherCalled = true;
@@ -258,7 +276,7 @@ describe("platform guard", () => {
     });
     try {
       expect(() => runSelfUpdateCheck(makeCrewHome())).toThrow(
-        /Homecrew ships macOS binaries only/,
+        /Homecrew ships binaries for macOS and Linux/,
       );
       expect(fetcherCalled).toBe(false);
     } finally {

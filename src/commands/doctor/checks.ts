@@ -9,7 +9,7 @@
 
 import { existsSync } from "node:fs";
 import { ALL_AGENTS } from "../../agents/registry.ts";
-import { isAutoupdateLoaded } from "../../autoupdate/launchd.ts";
+import { autoupdateSchedulerName, isAutoupdateLoaded } from "../../autoupdate/backend.ts";
 import { paths } from "../../core/paths.ts";
 import type { Config, StateEntry } from "../../core/types.ts";
 import { hashDirectory } from "../../hash/content.ts";
@@ -160,14 +160,14 @@ export function checkAutoupdateDrift(config: Config): Finding[] {
     findings.push({
       level: "warn",
       code: "autoupdate_not_loaded",
-      message: "config says autoupdate enabled but launchd agent is not loaded",
+      message: `config says autoupdate enabled but ${autoupdateSchedulerName()} is not loaded`,
     });
   }
   if (!config.autoupdate.enabled && loaded) {
     findings.push({
       level: "warn",
       code: "autoupdate_unexpectedly_loaded",
-      message: "autoupdate agent is loaded but config says disabled",
+      message: `autoupdate ${autoupdateSchedulerName()} is loaded but config says disabled`,
     });
   }
   return findings;

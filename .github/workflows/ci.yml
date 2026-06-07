@@ -14,10 +14,9 @@ concurrency:
 
 jobs:
   check:
-    # Ubuntu is plenty for `bun run check` — launchctl is stubbed to a
-    # no-op on non-Darwin so the test suite runs green here without
-    # shelling out to a macOS-only binary. macOS runners are 10x the
-    # cost; we use them only in the release workflow.
+    # Ubuntu is plenty for `bun run check`; platform-specific scheduler
+    # commands are stubbed in tests. macOS runners are 10x the cost, so
+    # we avoid them for ordinary CI.
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

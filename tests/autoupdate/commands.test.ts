@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { bundlePath } from "../../src/autoupdate/bundle.ts";
@@ -12,6 +12,15 @@ import { captureStreams, makeCrewHome } from "../helpers/env.ts";
 // `~/Library/LaunchAgents/`. `paths()` reads this env var on every
 // call, so setting it per-test is sufficient.
 const savedLaunchAgentsDir = process.env["CREW_LAUNCH_AGENTS_DIR"];
+const originalPlatform = process.platform;
+
+beforeAll(() => {
+  Object.defineProperty(process, "platform", { value: "darwin", configurable: true });
+});
+
+afterAll(() => {
+  Object.defineProperty(process, "platform", { value: originalPlatform, configurable: true });
+});
 
 beforeEach(() => {
   process.env["CREW_LAUNCH_AGENTS_DIR"] = makeCrewHome();

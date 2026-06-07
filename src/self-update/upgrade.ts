@@ -7,10 +7,11 @@
  */
 
 import { CrewError } from "../core/errors.ts";
+import { hostPlatform, isSupportedExecutablePlatform } from "../core/platform.ts";
 import { CREW_VERSION } from "../core/version.ts";
 import { writeVersionCheck } from "./check.ts";
 import { checksumAssetUrl, downloadChecksums, verifyAssetChecksum } from "./checksum.ts";
-import { assetNameForArch, downloadAssetToTemp, installBinary } from "./download.ts";
+import { assetNameForPlatform, downloadAssetToTemp, installBinary } from "./download.ts";
 import { fetchRelease, releasesByTagUrl, releasesLatestUrl } from "./github.ts";
 import {
   checksumSignatureAssetUrl,
@@ -42,7 +43,7 @@ export interface SelfUpdateOptions {
 }
 
 export function runSelfUpdate(options: SelfUpdateOptions): SelfUpdateResult {
-  assertMacOS();
+  assertSupportedPlatform();
   const url = options.tag ? releasesByTagUrl(options.tag) : releasesLatestUrl();
   const release = fetchRelease(url, RELEASE_FETCH_TIMEOUT_SECONDS);
 
@@ -54,7 +55,7 @@ export function runSelfUpdate(options: SelfUpdateOptions): SelfUpdateResult {
     return { currentVersion, latestTag: release.tag, replaced: false };
   }
 
-  const assetName = assetNameForArch();
+  const assetName = assetNameForPlatform();
   const downloadUrl = release.assets[assetName];
   if (!downloadUrl) {
     throw new CrewError(
@@ -100,7 +101,7 @@ export function runSelfUpdateCheck(
   home: string,
   tag?: string,
 ): { readonly currentVersion: string; readonly latestTag: string } {
-  assertMacOS();
+  assertSupportedPlatform();
   const url = tag ? releasesByTagUrl(tag) : releasesLatestUrl();
   const release = fetchRelease(url, RELEASE_FETCH_TIMEOUT_SECONDS);
   writeVersionCheck(release.tag, home);
@@ -112,12 +113,13 @@ function sameTag(a: string, b: string): boolean {
   return norm(a) === norm(b);
 }
 
-function assertMacOS(): void {
-  if (process.platform !== "darwin") {
+function assertSupportedPlatform(): void {
+  const platform = hostPlatform();
+  if (!isSupportedExecutablePlatform(platform)) {
     throw new CrewError(
       "self_update_unavailable",
-      "Homecrew ships macOS binaries only. use your package manager or build from source on other platforms.",
-      { platform: process.platform },
+      "Homecrew ships binaries for macOS and Linux only. Use your package manager or build from source on other platforms.",
+      { platform },
     );
   }
 }

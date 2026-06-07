@@ -13,6 +13,7 @@ import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   assetNameForArch,
+  assetNameForPlatform,
   downloadAssetToTemp,
   installBinary,
   resetAssetDownloader,
@@ -38,6 +39,28 @@ describe("assetNameForArch", () => {
 
   test("throws self_update_unavailable for unknown arches", () => {
     expect(() => assetNameForArch("riscv64")).toThrow(/no release asset for this CPU \(riscv64\)/);
+  });
+});
+
+describe("assetNameForPlatform", () => {
+  test("darwin arm64 → crew-macos-arm64", () => {
+    expect(assetNameForPlatform("darwin", "arm64")).toBe("crew-macos-arm64");
+  });
+
+  test("darwin x64 → crew-macos-x64", () => {
+    expect(assetNameForPlatform("darwin", "x64")).toBe("crew-macos-x64");
+  });
+
+  test("linux x64 → crew-linux-x64", () => {
+    expect(assetNameForPlatform("linux", "x64")).toBe("crew-linux-x64");
+  });
+
+  test("linux arm64 → crew-linux-arm64", () => {
+    expect(assetNameForPlatform("linux", "arm64")).toBe("crew-linux-arm64");
+  });
+
+  test("throws self_update_unavailable for unsupported platforms", () => {
+    expect(() => assetNameForPlatform("win32", "x64")).toThrow(/no release asset/);
   });
 });
 

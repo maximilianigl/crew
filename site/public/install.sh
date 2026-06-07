@@ -6,12 +6,12 @@
 #   curl -fsSL https://crew.logic.inc/install.sh | sh
 #
 # What it does:
-#   1. Detects your macOS CPU architecture (arm64 or x86_64).
+#   1. Detects your OS and CPU architecture (macOS/Linux, arm64/x86_64).
 #   2. Downloads the latest crew release from GitHub.
 #   3. Verifies the signed release SHA256SUMS file, then verifies
 #      the binary against it.
 #   4. Installs to $CREW_INSTALL_PREFIX (default: ~/.local/bin).
-#   5. Clears the macOS quarantine attribute so Gatekeeper doesn't
+#   5. On macOS, clears the quarantine attribute so Gatekeeper doesn't
 #      block the first run.
 #   6. Tells you how to put the install dir on your PATH if it isn't.
 #
@@ -36,18 +36,26 @@ die()  { warn "$*"; exit 1; }
 
 # ---------- Prerequisites ------------------------------------------------
 
-[ "$(uname -s)" = "Darwin" ] || die "Homecrew is macOS-only for now. Linux and Windows are tracked but not yet shipping."
-
 command -v curl >/dev/null 2>&1 || die "\`curl\` is required but not on PATH."
-command -v shasum >/dev/null 2>&1 || die "\`shasum\` is required but not on PATH."
 command -v openssl >/dev/null 2>&1 || die "\`openssl\` is required but not on PATH."
 
+os="$(uname -s)"
 arch="$(uname -m)"
-case "$arch" in
-  arm64)  asset="crew-macos-arm64" ;;
-  x86_64) asset="crew-macos-x64"   ;;
-  *) die "unsupported architecture: $arch" ;;
+case "$os:$arch" in
+  Darwin:arm64)  asset="crew-macos-arm64" ;;
+  Darwin:x86_64) asset="crew-macos-x64"   ;;
+  Linux:arm64|Linux:aarch64) asset="crew-linux-arm64" ;;
+  Linux:x86_64|Linux:amd64)  asset="crew-linux-x64"   ;;
+  *) die "unsupported platform: $os $arch. Homecrew ships macOS and Linux binaries for arm64 and x86_64." ;;
 esac
+
+if [ "$os" = "Darwin" ]; then
+  command -v shasum >/dev/null 2>&1 || die "\`shasum\` is required but not on PATH."
+  checksum_file() { shasum -a 256 "$1" | awk '{ print $1 }'; }
+else
+  command -v sha256sum >/dev/null 2>&1 || die "\`sha256sum\` is required but not on PATH."
+  checksum_file() { sha256sum "$1" | awk '{ print $1 }'; }
+fi
 
 # ---------- Resolve version and download URL ----------------------------
 
@@ -127,7 +135,7 @@ log "Verifying checksum"
 expected="$(awk -v asset="$asset" '$2 == asset { print $1; found = 1 } END { if (!found) exit 1 }' "$checksums")" || {
   die "checksum file did not contain an entry for $asset. Refusing to install."
 }
-actual="$(shasum -a 256 "$tmpfile" | awk '{ print $1 }')"
+actual="$(checksum_file "$tmpfile")"
 if [ "$actual" != "$expected" ]; then
   die "checksum mismatch for $asset. Expected $expected but got $actual. Refusing to install."
 fi
@@ -138,7 +146,9 @@ chmod +x "$tmpfile"
 # Clear macOS quarantine so Gatekeeper doesn't block the first run.
 # `xattr -dr com.apple.quarantine` is a no-op if the attribute isn't
 # set, so we don't need to check first.
-xattr -dr com.apple.quarantine "$tmpfile" 2>/dev/null || true
+if [ "$os" = "Darwin" ]; then
+  xattr -dr com.apple.quarantine "$tmpfile" 2>/dev/null || true
+fi
 
 # ---------- Install to prefix -------------------------------------------
 

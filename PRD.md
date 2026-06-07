@@ -4,7 +4,7 @@
 
 Version: 0.9.0
 Status: Specification, ready for implementation
-Platform: macOS (Apple Silicon and Intel)
+Platform: macOS and Linux (arm64 and x86_64)
 
 This document specifies the behavior of Homecrew, a command-line tool whose executable is named `crew`, in enough detail that two independent implementations should produce interchangeable executables. Anything an end user can observe — commands, outputs, exit codes, file layouts, algorithms, error conditions — is defined here. Internal implementation choices (language, argument parser, hash library, HTTP client, how files are copied) are deliberately left to the implementer; see §17 "Implementation latitude" for the full list.
 
@@ -12,7 +12,7 @@ This document specifies the behavior of Homecrew, a command-line tool whose exec
 
 ## 1. Overview
 
-Homecrew manages Agent Skills — the standardized, markdown-based skill format specified at [agentskills.io](https://agentskills.io/specification) — across every agent coder on a macOS machine that supports them (Claude Code, Codex CLI, Gemini CLI, and others).
+Homecrew manages Agent Skills — the standardized, markdown-based skill format specified at [agentskills.io](https://agentskills.io/specification) — across every agent coder on a macOS or Linux machine that supports them (Claude Code, Codex CLI, Gemini CLI, and others).
 
 The value proposition is one command: `crew install python-testing` installs a skill into every agent tool on the machine, keeps it up to date, and lets users discover new skills from a shared registry or directly from any git repo.
 
@@ -28,11 +28,11 @@ Homecrew installs skills by copying files into each agent tool's expected direct
 - Direct install from any reachable git repository, with no registry setup required.
 - Install every skill found under a directory or git repo in one command.
 - Keep skills current manually (`crew update`) or via a background job (`crew autoupdate`).
-- Ship as a single macOS executable invokable as `crew` on `PATH`.
+- Ship as single-file macOS and Linux executables invokable as `crew` on `PATH`.
 
 **Non-goals**
 
-- Cross-platform support. macOS only. Other platforms are future work.
+- Windows support. Homecrew supports macOS and Linux; Windows is future work.
 - Symlinks. Homecrew always copies files.
 - Skill authoring tooling (creating and linting new skills) beyond minimal validation.
 - Executing skills. Homecrew installs files; agents run them.
@@ -116,8 +116,8 @@ crew agents                      List detected agents and their status.
 crew agents enable <name>        Force-enable an otherwise-undetected agent.
 crew agents disable <name>       Skip this agent on all install/update operations.
 
-crew autoupdate enable [--interval <dur>]   Install the launchd agent (default 4h).
-crew autoupdate disable                      Remove the launchd agent.
+crew autoupdate enable [--interval <dur>]   Install the platform scheduler (default 4h).
+crew autoupdate disable                      Remove the platform scheduler.
 crew autoupdate status                       Show whether active, last run, next run.
 
 crew self-update [--check] [--version <v>]  Upgrade the `crew` binary itself to the latest release.
@@ -319,10 +319,15 @@ With `--json`, help MUST emit a structured payload:
 │   └── <skill-name>@<short-sha>/
 ├── logs/
 │   └── autoupdate.log
-└── Homecrew.app/        # attribution bundle used by autoupdate (see §10.2)
+└── Homecrew.app/        # macOS attribution bundle used by autoupdate (see §10.2)
     └── Contents/
         └── Info.plist
 ```
+
+On Linux, `crew autoupdate enable` also writes systemd user units outside
+`~/.crew/` at `~/.config/systemd/user/sh.crew.autoupdate.service` and
+`~/.config/systemd/user/sh.crew.autoupdate.timer` (or under
+`$XDG_CONFIG_HOME/systemd/user` when `XDG_CONFIG_HOME` is set).
 
 All paths inside `~/.crew/` are owned by Homecrew. External tools should not write here. Homecrew may delete anything under `cache/` at any time; `store/` is garbage-collected by `crew update` and `crew cache clean`; `taps/`, `state.json`, `config.yaml`, and `logs/` are durable.
 
@@ -404,7 +409,7 @@ Every adapter must provide:
 
 ### 7.2 Agents in v1
 
-Every adapter listed at [agentskills.io/clients](https://agentskills.io/clients) that (a) is installable on macOS as a local app or CLI and (b) reads skills from a filesystem location ships as a crew adapter. The full set:
+Every adapter listed at [agentskills.io/clients](https://agentskills.io/clients) that (a) is installable on macOS or Linux as a local app or CLI and (b) reads skills from a filesystem location ships as a crew adapter. The full set:
 
 | Adapter | User-scope skills dir | Project-scope skills dir | Detection |
 |---|---|---|---|
@@ -905,9 +910,30 @@ autoupdate would do.
 
 ### 10.2 `crew autoupdate`
 
-`crew autoupdate enable [--interval <duration>]` installs a launchd user agent that runs `crew update --quiet` on the given interval. Default interval is 4 hours. Accepted duration units: `s`, `m`, `h`, `d`.
+`crew autoupdate enable [--interval <duration>]` installs a per-user
+background scheduler that runs `crew update --quiet` on the given interval.
+Default interval is 4 hours. Accepted duration units: `s`, `m`, `h`, `d`.
 
-**The launchd plist MUST be written to `~/Library/LaunchAgents/sh.crew.autoupdate.plist`** with the following minimum shape:
+`CREW_HOME` MUST be pinned in the scheduler definition to the effective crew
+home used when `crew autoupdate enable` was run. This keeps scheduled updates
+pointing at the same state/config directory even when the user enabled
+autoupdate with a non-default `CREW_HOME`. `CREW_AUTOUPDATE_LOG=1` is an
+internal flag consumed by `crew update --quiet`: when present, `crew update`
+MUST append one line to the autoupdate log before exiting:
+
+```text
+crew-autoupdate <ISO-8601 timestamp> exit=<integer exit code>
+```
+
+This line is in addition to any command output or errors redirected by the
+scheduler. It is the authoritative source for `crew autoupdate status`'s
+last-run timestamp and exit status.
+
+#### macOS launchd backend
+
+On macOS, `crew autoupdate enable` installs a launchd user agent. **The plist
+MUST be written to `~/Library/LaunchAgents/sh.crew.autoupdate.plist`** with the
+following minimum shape:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -938,41 +964,76 @@ autoupdate would do.
 </plist>
 ```
 
-`CREW_HOME` MUST be set in the plist to the effective crew home used
-when `crew autoupdate enable` was run. This keeps scheduled updates
-pointing at the same state/config directory even when the user enabled
-autoupdate with a non-default `CREW_HOME`. `CREW_AUTOUPDATE_LOG=1` is
-an internal flag consumed by `crew update --quiet`: when present,
-`crew update` MUST append one line to the autoupdate log before exiting:
+**Attribution bundle.** On macOS Ventura and later, Login Items labels a
+launchd agent by the code-signing team of the executable unless the plist
+carries `AssociatedBundleIdentifiers` pointing at a resolvable bundle. To avoid
+Login Items showing the `crew` binary's signer, Homecrew writes a minimal
+attribution bundle at `~/.crew/Homecrew.app/` containing `Contents/Info.plist`
+with `CFBundleIdentifier = sh.crew.autoupdater` and `CFBundleDisplayName =
+"Homecrew Skill Autoupdate"`. The bundle has no executable; it exists solely as
+metadata for Login Items. The plist's `AssociatedBundleIdentifiers` references
+`sh.crew.autoupdater` so macOS attributes the agent to this bundle.
 
-```text
-crew-autoupdate <ISO-8601 timestamp> exit=<integer exit code>
+After writing the bundle and plist, crew loads the agent via `launchctl
+bootstrap gui/<uid> <plist-path>` (or `launchctl load` on older macOS versions
+where `bootstrap` is unavailable). A load failure produces `launchd_failure`
+(exit 8).
+
+`crew autoupdate disable` unloads the agent (`launchctl bootout
+gui/<uid>/sh.crew.autoupdate` or `launchctl unload`) and removes the plist.
+
+#### Linux systemd backend
+
+On Linux, `crew autoupdate enable` installs a systemd user timer. The service
+and timer units MUST be written to `$XDG_CONFIG_HOME/systemd/user/` when
+`XDG_CONFIG_HOME` is set, otherwise to `~/.config/systemd/user/`. The filenames
+MUST be `sh.crew.autoupdate.service` and `sh.crew.autoupdate.timer`.
+
+The service unit MUST have this minimum shape:
+
+```ini
+[Unit]
+Description=Homecrew Skill Autoupdate
+
+[Service]
+Type=oneshot
+Environment="CREW_HOME=<!-- effective crew home at enable time -->" "CREW_AUTOUPDATE_LOG=1"
+ExecStart="<!-- absolute path to the crew executable -->" update --quiet
+StandardOutput=append:<!-- absolute path to ~/.crew/logs/autoupdate.log -->
+StandardError=append:<!-- same -->
 ```
 
-This line is in addition to any command output or errors redirected by
-launchd. It is the authoritative source for `crew autoupdate status`'s
-last-run timestamp and exit status.
+The timer unit MUST have this minimum shape:
 
-**Attribution bundle.** On macOS Ventura and later, Login Items labels a
-launchd agent by the code-signing team of the executable unless the
-plist carries `AssociatedBundleIdentifiers` pointing at a resolvable
-bundle. To avoid Login Items showing the `crew` binary's signer, Homecrew
-writes a minimal attribution bundle at `~/.crew/Homecrew.app/` containing
-`Contents/Info.plist` with `CFBundleIdentifier = sh.crew.autoupdater`
-and `CFBundleDisplayName = "Homecrew Skill Autoupdate"`. The bundle has no
-executable; it exists solely as metadata for Login Items. The plist's
-`AssociatedBundleIdentifiers` references `sh.crew.autoupdater` so macOS
-attributes the agent to this bundle.
+```ini
+[Unit]
+Description=Run Homecrew Skill Autoupdate
 
-After writing the bundle and the plist, crew loads the agent via
-`launchctl bootstrap gui/<uid> <plist-path>` (or `launchctl load` on
-older macOS versions where `bootstrap` is unavailable). `config.yaml`'s
-`autoupdate.enabled` is set to `true` and `autoupdate.interval_seconds`
-to the chosen interval.
+[Timer]
+OnBootSec=<!-- interval in seconds -->s
+OnUnitActiveSec=<!-- interval in seconds -->s
+Unit=sh.crew.autoupdate.service
+Persistent=true
 
-`crew autoupdate disable` unloads the agent (`launchctl bootout gui/<uid>/sh.crew.autoupdate` or `launchctl unload`), removes the plist, and sets `autoupdate.enabled` to `false`.
+[Install]
+WantedBy=timers.target
+```
 
-`crew autoupdate status` reports: whether the agent is loaded, the configured interval, the timestamp of the last run (from the log), and the exit status of the last run.
+After writing both units, crew runs `systemctl --user daemon-reload` and
+`systemctl --user enable --now sh.crew.autoupdate.timer`. A systemctl failure
+produces `systemd_failure` (exit 8).
+
+`crew autoupdate disable` runs `systemctl --user disable --now
+sh.crew.autoupdate.timer`, removes both unit files, then runs `systemctl --user
+daemon-reload`.
+
+`crew autoupdate status` reports: whether the platform scheduler is loaded or
+active, the configured interval, the timestamp of the last run (from the log),
+and the exit status of the last run.
+
+On all platforms, successful `enable` sets `config.yaml`'s
+`autoupdate.enabled` to `true` and `autoupdate.interval_seconds` to the chosen
+interval. Successful `disable` sets `autoupdate.enabled` to `false`.
 
 ### 10.3 `crew self-update`
 
@@ -995,6 +1056,8 @@ Both endpoints emit the same JSON shape:
   "assets": [
     { "name": "crew-macos-arm64", "browser_download_url": "https://github.com/with-logic/crew/releases/download/v0.4.0/crew-macos-arm64" },
     { "name": "crew-macos-x64",   "browser_download_url": "https://github.com/with-logic/crew/releases/download/v0.4.0/crew-macos-x64" },
+    { "name": "crew-linux-arm64", "browser_download_url": "https://github.com/with-logic/crew/releases/download/v0.4.0/crew-linux-arm64" },
+    { "name": "crew-linux-x64",   "browser_download_url": "https://github.com/with-logic/crew/releases/download/v0.4.0/crew-linux-x64" },
     { "name": "SHA256SUMS",       "browser_download_url": "https://github.com/with-logic/crew/releases/download/v0.4.0/SHA256SUMS" },
     { "name": "SHA256SUMS.sig",   "browser_download_url": "https://github.com/with-logic/crew/releases/download/v0.4.0/SHA256SUMS.sig" }
   ]
@@ -1008,8 +1071,8 @@ binaries, the site just advertises the pointer).
 
 Every release starting with `v0.7.1` MUST publish both:
 
-- `SHA256SUMS` — SHA-256 hashes for `crew-macos-arm64` and
-  `crew-macos-x64`.
+- `SHA256SUMS` — SHA-256 hashes for `crew-macos-arm64`,
+  `crew-macos-x64`, `crew-linux-arm64`, and `crew-linux-x64`.
 - `SHA256SUMS.sig` — an RSA/SHA-256 signature over the exact
   `SHA256SUMS` bytes, verifiable with Homecrew's pinned release-signing
   public key.
@@ -1032,8 +1095,10 @@ the latest-release URL (used by tests and private forks).
    - Otherwise fetch the latest-release URL.
 2. If the resolved tag matches the running `CREW_VERSION` and `--force`
    is not set, print "already on the latest version" and exit 0.
-3. Resolve the asset matching the current CPU architecture
-   (`arm64` → `crew-macos-arm64`, `x86_64` → `crew-macos-x64`).
+3. Resolve the asset matching the current OS and CPU architecture:
+   macOS `arm64` → `crew-macos-arm64`, macOS `x86_64`/`x64` →
+   `crew-macos-x64`, Linux `arm64` → `crew-linux-arm64`, and Linux
+   `x86_64`/`x64` → `crew-linux-x64`.
 4. Download the `SHA256SUMS` asset, the `SHA256SUMS.sig` asset (except for
    legacy `v0.7.0`), and the selected binary asset from the resolved release.
 5. Verify `SHA256SUMS.sig` against `SHA256SUMS` using Homecrew's pinned
@@ -1075,9 +1140,9 @@ the latest-release URL (used by tests and private forks).
 - `self_update_failed` (exit 8) — the replacement step failed (e.g. the
   binary path isn't writable). The old binary is left in place.
 
-**Non-macOS.** `crew self-update` on a non-macOS host produces
-`self_update_unavailable` with a message indicating Homecrew ships only for
-macOS. No release feed request is made.
+**Unsupported platforms.** `crew self-update` on an unsupported host (for
+example Windows) produces `self_update_unavailable` with a message indicating
+Homecrew ships binaries for macOS and Linux. No release feed request is made.
 
 ### 10.4 Update-available notice
 
@@ -1232,7 +1297,7 @@ off.
 4. Every agent listed in state still passes `detect()` (or is in `forced_agents`).
 5. No `store/` entry is orphaned (not referenced by any state entry).
 6. `config.yaml` parses.
-7. If autoupdate is enabled in config, the launchd agent is actually loaded.
+7. If autoupdate is enabled in config, the platform scheduler (launchd on macOS, systemd user timer on Linux) is actually loaded or active.
 8. For every project-scope entry, `project_root` exists on disk and a `.crew.json` marker lives under `<project_root>/<adapter-base>/<name>/`. A `project_root` that no longer exists produces a `missing_project_root` finding (warn, not error — the user may have simply moved the project, and the right fix is a `crew uninstall` from their new location).
 
 `--verify` includes check 3 (hash recomputation); without it, check 3 is skipped for speed.
@@ -1242,7 +1307,7 @@ off.
 - Orphaned state entries (no corresponding marker and agent missing): remove from state.
 - Orphaned markers (marker present, no state entry): re-add to state.
 - Orphan store entries: delete them.
-- Autoupdate drift (config says enabled but agent not loaded, or vice versa): reconcile to the config's value.
+- Autoupdate drift (config says enabled but the platform scheduler is not loaded/active, or vice versa): reconcile to the config's value.
 
 `--repair` never overwrites user-customized skills or touches anything outside `~/.crew/` and the agent skill directories it already manages.
 
@@ -1291,8 +1356,9 @@ Every error below has a stable machine-readable name (for `--json` output) and a
 | `no_agents` | 4 | No agent tools detected or all disabled. |
 | `config_invalid` | 4 | `config.yaml` did not parse. |
 | `state_locked` | 7 | Could not acquire `state.json.lock` within timeout. |
-| `launchd_failure` | 8 | Autoupdate enable/disable couldn't load/unload the agent. |
-| `self_update_unavailable` | 5 | `crew self-update` couldn't reach the release feed, the asset is missing for the current arch, or the named `--version` doesn't exist. |
+| `launchd_failure` | 8 | macOS autoupdate enable/disable could not load/unload the launchd agent. |
+| `systemd_failure` | 8 | Linux autoupdate enable/disable could not load/unload the systemd user timer. |
+| `self_update_unavailable` | 5 | `crew self-update` couldn't reach the release feed, the asset is missing for the current platform/arch, or the named `--version` doesn't exist. |
 | `self_update_failed` | 8 | `crew self-update` fetched a new binary but couldn't replace the running one (e.g. the install prefix isn't writable). |
 
 The `--force` flag overrides `customized`, `untracked_directory`, `inconsistent_marker`, and `not_installed_here`. It does **not** override `invalid_skill`, `name_conflict`, `conflicting_dependencies`, or any other error.
@@ -1330,7 +1396,7 @@ bar here is craft, not compliance.
 
 Homecrew mutates state from multiple entry points (interactive commands, autoupdate). To prevent races:
 
-1. Every command that writes `state.json` or installs into an agent acquires an advisory lock on `~/.crew/state.json.lock` (using `flock(2)` or an equivalent macOS file-lock primitive) before making changes. Read-only commands do not take the lock.
+1. Every command that writes `state.json` or installs into an agent acquires an advisory lock on `~/.crew/state.json.lock` (using `flock(2)` or an equivalent POSIX file-lock primitive) before making changes. Read-only commands do not take the lock.
 2. Lock timeout: 30 seconds. If not acquired, exit with `state_locked` (§13).
 3. The lock is held for the full duration of file-modifying operations and released on exit, including crashes (OS-level file locks release on fd close).
 4. Git clone/fetch against a single repo is serialized under the state lock. This is not the most parallel design but is simple and adequate for a desktop tool.
@@ -1346,7 +1412,7 @@ Homecrew mutates state from multiple entry points (interactive commands, autoupd
 | 5 | Network / source failure: could not reach git, ref does not exist, release feed unreachable. |
 | 6 | Safety-check abort: untracked directory, customized skill, bad marker. |
 | 7 | Could not acquire state lock. |
-| 8 | macOS integration failure: launchd agent could not be loaded/unloaded, or self-update couldn't replace the binary. |
+| 8 | Platform integration failure: launchd/systemd autoupdate could not be loaded/unloaded, or self-update could not replace the binary. |
 
 ## 16. Taps
 
@@ -1560,7 +1626,7 @@ The only commands that actively fetch from upstream are:
 
 The following are deliberately **not** specified. Implementations may choose freely:
 
-- **Language and runtime.** Any language that can produce a single-file macOS executable.
+- **Language and runtime.** Any language that can produce single-file macOS and Linux executables.
 - **Argument parser.** Any library or hand-rolled.
 - **YAML parser.** Any that handles the subset the Agent Skills spec uses.
 - **JSON serialization style.** Indented or compact, as long as output is valid JSON.
@@ -1573,7 +1639,8 @@ The following are deliberately **not** specified. Implementations may choose fre
 ### 17.1 Required external dependencies
 
 - `git` on `PATH` at runtime.
-- `launchctl` (present on all macOS).
+- `launchctl` for `crew autoupdate` on macOS (present on all macOS).
+- `systemctl --user` for `crew autoupdate` on Linux.
 
 ### 17.2 Performance expectations
 
@@ -1846,16 +1913,21 @@ Implementations and test suites refer to criteria by ID.
 
 | ID | Reference | Assertion |
 |---|---|---|
-| C-AUTO-01 | §10.2 | `crew autoupdate enable` writes a plist to `~/Library/LaunchAgents/sh.crew.autoupdate.plist`. |
-| C-AUTO-02 | §10.2 | The plist's `Label` is `sh.crew.autoupdate`, `ProgramArguments` invokes `crew update --quiet`, and `StartInterval` matches the configured interval. |
-| C-AUTO-03 | §10.2 | `crew autoupdate enable` loads the agent via `launchctl`. |
-| C-AUTO-04 | §10.2 | `crew autoupdate disable` unloads the agent and removes the plist. |
+| C-AUTO-01 | §10.2 | On macOS, `crew autoupdate enable` writes a plist to `~/Library/LaunchAgents/sh.crew.autoupdate.plist`. |
+| C-AUTO-02 | §10.2 | On macOS, the plist's `Label` is `sh.crew.autoupdate`, `ProgramArguments` invokes `crew update --quiet`, and `StartInterval` matches the configured interval. |
+| C-AUTO-03 | §10.2 | On macOS, `crew autoupdate enable` loads the agent via `launchctl`. |
+| C-AUTO-04 | §10.2 | On macOS, `crew autoupdate disable` unloads the agent and removes the plist. |
 | C-AUTO-05 | §10.2 | `crew autoupdate status` reports enabled/disabled state, configured interval, and last-run info. |
-| C-AUTO-06 | §10.2 | A failure to load the agent produces `launchd_failure`, exit 8, with a clear message. |
+| C-AUTO-06 | §10.2 | A macOS failure to load the agent produces `launchd_failure`, exit 8, with a clear message. |
 | C-AUTO-07 | §10.2 | Default interval when none is specified is 14400 seconds (4 hours). |
 | C-AUTO-08 | §10.2 | Interval strings `30s`, `5m`, `2h`, `1d` are accepted. |
-| C-AUTO-09 | §10.2 | `crew autoupdate enable` writes an attribution bundle at `~/.crew/Homecrew.app/Contents/Info.plist` with `CFBundleIdentifier = sh.crew.autoupdater` and `CFBundleDisplayName = "Homecrew Skill Autoupdate"`. |
-| C-AUTO-10 | §10.2 | The plist carries an `AssociatedBundleIdentifiers` array containing `sh.crew.autoupdater`. |
+| C-AUTO-09 | §10.2 | On macOS, `crew autoupdate enable` writes an attribution bundle at `~/.crew/Homecrew.app/Contents/Info.plist` with `CFBundleIdentifier = sh.crew.autoupdater` and `CFBundleDisplayName = "Homecrew Skill Autoupdate"`. |
+| C-AUTO-10 | §10.2 | On macOS, the plist carries an `AssociatedBundleIdentifiers` array containing `sh.crew.autoupdater`. |
+| C-AUTO-11 | §10.2 | On Linux, `crew autoupdate enable` writes `sh.crew.autoupdate.service` and `sh.crew.autoupdate.timer` under the systemd user unit directory. |
+| C-AUTO-12 | §10.2 | On Linux, the service invokes `crew update --quiet`, pins `CREW_HOME`, and sets `CREW_AUTOUPDATE_LOG=1`; the timer interval matches the configured interval. |
+| C-AUTO-13 | §10.2 | On Linux, `crew autoupdate enable` runs `systemctl --user daemon-reload` and `systemctl --user enable --now sh.crew.autoupdate.timer`. |
+| C-AUTO-14 | §10.2 | On Linux, `crew autoupdate disable` disables the timer, removes both unit files, and reloads systemd. |
+| C-AUTO-15 | §10.2 | A Linux failure to enable the timer produces `systemd_failure`, exit 8, with a clear message. |
 
 #### C-SELF: Self-update (§10.3, §10.4)
 

@@ -133,6 +133,8 @@ const REMEDIES: Partial<Record<CrewErrorName, string>> = {
     "Another `crew` process is holding the lock. Wait a few seconds and try again; if it's really stuck, run `crew doctor --repair`.",
   launchd_failure:
     "`launchctl` couldn't load or unload the autoupdate agent. `crew autoupdate status` shows details; `crew autoupdate disable` then `crew autoupdate enable` is a safe reset.",
+  systemd_failure:
+    "`systemctl --user` couldn't load or unload the autoupdate timer. `crew autoupdate status` shows details; `crew autoupdate disable` then `crew autoupdate enable` is a safe reset.",
   self_update_unavailable:
     "Homecrew couldn't reach the release feed, or the requested version doesn't exist. Check your network, then try `crew self-update --check`.",
   self_update_failed:

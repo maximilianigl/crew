@@ -1,7 +1,7 @@
 /**
  * Release checksum verification for binary self-update (§10.3).
  *
- * `crew self-update` verifies the downloaded macOS binary against the
+ * `crew self-update` verifies the downloaded platform binary against the
  * release's SHA256SUMS asset before making it executable or replacing
  * the running binary.
  */

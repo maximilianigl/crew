@@ -36,7 +36,7 @@ const QAS: readonly QA[] = [
           </li>
           <li>
             <strong>Background autoupdate.</strong> <code>crew autoupdate enable</code> sets up a
-            launchd agent that keeps every skill current.
+            launchd agent on macOS or a systemd user timer on Linux that keeps every skill current.
           </li>
           <li>
             <strong>Local-edit protection.</strong> Homecrew hashes what it installs and refuses to
@@ -59,7 +59,7 @@ const QAS: readonly QA[] = [
         <p>
           Yes. Homecrew is still a package manager for your own skills. Install a skill once and it
           lands in every detected agent. Add your personal skills repo as a tap and your library
-          becomes searchable. Use a baseline skill to recreate your setup on a new Mac.
+          becomes searchable. Use a baseline skill to recreate your setup on a new machine.
         </p>
         <p>
           The team features are the same primitives scaled up: git sources, taps, dependency
@@ -81,7 +81,7 @@ const QAS: readonly QA[] = [
         </p>
         <p>
           Every <code>main</code>-merge automatically becomes installable team-wide. Pair it with{" "}
-          <code>crew autoupdate enable</code> and every Mac pulls approved skill updates on the next
+          <code>crew autoupdate enable</code> and every machine pulls approved skill updates on the next
           interval.
         </p>
       </>
@@ -164,8 +164,8 @@ const QAS: readonly QA[] = [
   },
   {
     id: "platforms",
-    q: "What about Linux? Windows?",
-    a: "Future work. The v1 spec is macOS-only because launchd is the autoupdate mechanism and each agent adapter encodes platform-specific paths. Nothing in the core design is Mac-specific; it's a scope decision, not a technical one.",
+    q: "What about Windows?",
+    a: "Homecrew supports macOS and Linux. Windows is future work because autoupdate and some agent adapters need platform-specific install paths and scheduler behavior.",
   },
 ];
 

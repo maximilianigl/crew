@@ -17,7 +17,7 @@ import { codexAdapter } from "../../src/agents/codex.ts";
 import { geminiCliAdapter } from "../../src/agents/gemini-cli.ts";
 import { ALL_AGENTS, agentByName } from "../../src/agents/registry.ts";
 import { uninstallSkillFromAgents } from "../../src/agents/uninstall.ts";
-import { resetLaunchctlRunner, setLaunchctlRunner } from "../../src/autoupdate/launchd.ts";
+import { resetSystemctlRunner, setSystemctlRunner } from "../../src/autoupdate/systemd.ts";
 import { runCli } from "../../src/cli/main.ts";
 import { parseDuration } from "../../src/commands/autoupdate.ts";
 import { CrewError } from "../../src/core/errors.ts";
@@ -374,30 +374,30 @@ describe("doctor warnings — orphan store", () => {
 
   test("doctor flags autoupdate drift", () => {
     const home = makeCrewHome();
-    // Enable in config without touching launchctl.
+    // Enable in config without touching systemd.
     const { writeConfig, readConfig } =
       require("../../src/config/load.ts") as typeof import("../../src/config/load.ts");
     const cfg = readConfig(home);
     writeConfig({ ...cfg, autoupdate: { enabled: true, interval_seconds: 60 } }, home);
-    setLaunchctlRunner(() => false); // not loaded
+    setSystemctlRunner(() => false); // not loaded
     try {
       const c = captureStreams();
       runCli(["doctor"], { home, streams: c.streams });
-      expect(c.stdout()).toContain("background agent isn't loaded");
+      expect(c.stdout()).toContain("background updater isn't loaded");
     } finally {
-      resetLaunchctlRunner();
+      resetSystemctlRunner();
     }
   });
 
   test("doctor flags autoupdate unexpectedly loaded", () => {
     const home = makeCrewHome();
-    setLaunchctlRunner(() => true); // loaded
+    setSystemctlRunner(() => true); // loaded
     try {
       const c = captureStreams();
       runCli(["doctor"], { home, streams: c.streams });
       expect(c.stdout()).toContain("still loaded");
     } finally {
-      resetLaunchctlRunner();
+      resetSystemctlRunner();
     }
   });
 });
